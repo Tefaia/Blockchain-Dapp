@@ -1,3 +1,32 @@
+require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-ethers");
+require("hardhat-typechain");
+
+module.exports = {
+  networks: {
+    hardhat: {
+      chainId: 1337 // Hardhat's default network ID
+    }
+  },
+  solidity: {
+    version: "0.8.24", // Specify your Solidity compiler version
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  }
+};
+
+npm install --save-dev "@nomiclabs/hardhat-ethers@^2.0.0" --legacy-peer-deps
+npm install --save-dev "@types/sinon-chai@^3.2.3" --legacy-peer-deps
+npm install --save-dev "ethereum-waffle@*" --legacy-peer-deps
+npm install --save-dev "ethers@^5.0.0" --legacy-peer-deps
+npm install --save-dev "ts-generator@^0.1.1" --legacy-peer-deps
+
+
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
