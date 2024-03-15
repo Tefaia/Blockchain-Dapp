@@ -7,12 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   password VARCHAR(255) NOT NULL,
   role ENUM('ADMIN', 'USER') NOT NULL DEFAULT 'USER'
 );
-CREATE TABLE IF NOT EXISTS logged_in_users (
-  session_id VARCHAR(36) PRIMARY KEY,
-  username VARCHAR(255) NOT NULL,
-  login_time DATETIME NOT NULL
- 
-);
+
 
 
 

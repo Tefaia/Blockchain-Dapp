@@ -1,6 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
-require("hardhat-typechain");
+//require("hardhat-typechain");
 
 module.exports = {
   networks: {
