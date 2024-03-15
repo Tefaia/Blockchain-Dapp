@@ -1,17 +1,17 @@
 sample curl test
-curl -X GET http://localhost:3002/blockchain/info
-curl -X GET http://localhost:3002/blockchain/
-curl -X GET http://localhost:3002/blockchain/debug
-curl -X GET http://localhost:3002/blockchain/debug/reset-chain
-curl -X GET http://localhost:3002/
+curl -X GET http://localhost:3002/blockchain/info-yes
+curl -X GET http://localhost:3002/blockchain/-yes
+curl -X GET http://localhost:3002/blockchain/debug-yes
+curl -X GET http://localhost:3002/blockchain/debug/reset-chain-yes
+curl -X GET http://localhost:3002/-yes
 curl -X POST -H "Content-Type: application/json" -d '{"data": "Block Data", "minerAddress": "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097", "difficulty": 2}' http://localhost:3002/blocks
 
 curl -X POST http://localhost:3002/peers/connect
 curl -X GET http://localhost:3002/peers/notify-new-block
 curl -X POST http://localhost:3002/wallet/accounts/create
-curl -X GET http://localhost:3002/wallet/address
+curl -X POST http://localhost:3002/wallet/address-yes
 curl -X http://localhost:3002/wallet/balances
-curl -X GET http://localhost:3002/1
+curl -X GET http://localhost:3002/blocks/1-yes
 curl -X POST http://localhost:3002/sendFunds/:address
 curl -X http://localhost:3002/debug/mine/:address/:difficulty
 curl -X GET http://localhost:3002/transactions/:tranHash
