@@ -40,7 +40,7 @@ app.use(helmet());
 
 // Set up CORS middleware
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'https://dapp-qeavc4m6n-tefaias-projects.vercel.app'],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
   optionsSuccessStatus: 204,
