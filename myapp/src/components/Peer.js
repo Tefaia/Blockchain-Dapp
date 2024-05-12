@@ -3,19 +3,16 @@ import Web3 from 'web3';
 import api from '../api/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-function Peer() {
+function Peer({ username }) {
   const [connectionStatus, setConnectionStatus] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
   const [connectedAccount, setConnectedAccount] = useState(null);
   const [blockCount, setBlockCount] = useState(null);
 
   useEffect(() => {
-    // Call notifyNewBlock automatically when the component mounts
     notifyNewBlock();
-    // Fetch the block count
     fetchBlockCount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array ensures this effect runs only once when the component mounts
+  }, []);
 
   const checkMetaMaskConnection = async () => {
     if (window.ethereum) {
@@ -41,9 +38,7 @@ function Peer() {
     try {
       const account = await checkMetaMaskConnection();
       if (account) {
-        // Call the backend API route to notify peers about a new block
-        await api.notifyNewBlock(account);
-        console.log('New block notified to peers successfully');
+        await api.notifyPeers();
         setNotificationMessage('New block notified to peers successfully');
       } else {
         setNotificationMessage('Error notifying peers: MetaMask not connected.');
@@ -60,6 +55,22 @@ function Peer() {
       setBlockCount(response.count);
     } catch (error) {
       console.error('Error fetching block count:', error);
+      setBlockCount(0); // Set a default value or handle the error appropriately
+    }
+  };
+
+  const connectPeers = async (username) => {
+    try {
+      const account = await checkMetaMaskConnection();
+      if (account) {
+        await api.connectPeers(username);
+        setNotificationMessage('Connected to peers successfully');
+      } else {
+        setNotificationMessage('Error connecting to peers: MetaMask not connected.');
+      }
+    } catch (error) {
+      console.error('Error connecting to peers:', error);
+      setNotificationMessage('Error connecting to peers');
     }
   };
 
@@ -69,6 +80,9 @@ function Peer() {
       <p>{notificationMessage}</p>
       <p>{`Connected Account: ${connectedAccount || 'Not connected'}`}</p>
       <p>{`Block Count: ${blockCount !== null ? blockCount : 'Loading...'}`}</p>
+      <button className="btn btn-primary" onClick={() => connectPeers(username)}>
+        Connect to Peers
+      </button>
     </div>
   );
 }

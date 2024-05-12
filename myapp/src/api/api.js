@@ -1,8 +1,8 @@
 import axios from 'axios';
+const baseURL = 'http://localhost:3002'; // Base URL for app API
+const peerURL = 'http://localhost:3001'; // URL for peer service
 
-const baseURL = 'http://localhost:3002'; // Base URL for your API
-
-const makeRequest = async (endpoint, method = 'GET', data = null) => {
+const makeRequest = async (endpoint, method = 'GET', data = null, baseURL) => {
   const url = `${baseURL}${endpoint}`;
   console.log('Request URL:', url); // Log the constructed URL
   try {
@@ -20,157 +20,62 @@ const makeRequest = async (endpoint, method = 'GET', data = null) => {
   }
 };
 
-
-// API functions for generic blockchain functionalities
 const api = {
   // Wallet Module
-  accountBalance: async (address) => makeRequest(`/wallet/balances/${address}`),
-  accountTransactions: async (address) => makeRequest(`/wallet/address/${address}/transactions`),
-
-
+  searchUser: async (username) => makeRequest(`/wallet/search/${username}`, 'GET', null, baseURL),
+  
   // Faucet Module
-  requestFaucetFunds:async (recipientAddress) => {
-    try {
-      if (!recipientAddress) {
-        throw new Error('Please provide a recipient address');
-      }
-  
-      const response = await makeRequest('/faucet/sendfunds', 'POST', { recipientAddress });
-      return response;
-    } catch (error) {
-      throw error.response ? error.response.data.error : error.message;
+requestFaucetFunds: async (recipientAddress) => {
+  try {
+    if (!recipientAddress) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+      throw new Error('Please provide a recipient address');
     }
-  },
-  // Generate Address Module
-  generateNewAddress: async () => makeRequest(`/wallet/generate`),
 
+    // Log recipient address
+    console.log('Recipient Address:', recipientAddress);
+
+    const response = await makeRequest(`/faucet/sendtokens`, 'POST', { recipientAddress }, baseURL);
+    return response;
+  } catch (error) {
+    if (error.response) {
+      throw error.response.data.error;
+    } else {
+      throw error.message;
+    }
+  }
+},
+
+ 
   // Peer Module
-  connectPeers: async () => makeRequest(`/peers/connect`),
-  notifyPeers: async () => makeRequest(`/peers/notify-new-block`),
+  connectPeers: async (username) => makeRequest(`/blockchain/peers/connect/${username}`, 'GET', null, peerURL),
+  notifyPeers: async () => makeRequest(`/blockchain/peers/notify-new-block`, 'GET', null, peerURL),
 
-
-  // Miner Module
-  getMiningJob: async (minerAddress, difficulty) => {
-    try {
-      // Construct the request URL based on the provided address
-      const url = `/mining/get-mining-job/${minerAddress}`;
-  
-      // Make the request with any additional parameters if needed
-      const response = await makeRequest(url, 'GET', { difficulty });
-  
-      // Return the mining job data from the response
-      return response.miningJob;
-    } catch (error) {
-      // Handle errors appropriately
-      throw error.response ? error.response.data.error : error.message;
-    }
-  },
-  
-  submitMinedBlock: async (minerAddress, difficulty, /* any other necessary data */) => {
-    try {
-      // Construct the request data
-      const requestData = {
-        minerAddress,
-        difficulty,
-        // Add any other required data for submitting mined block
-      };
-  
-      // Make the request
-      const response = await makeRequest('/mining/submit-mined-block', 'POST', requestData);
-  
-      // Return the response or handle it as needed
-      return response;
-    } catch (error) {
-      // Handle errors appropriately
-      throw error.response ? error.response.data.error : error.message;
-    }
-  },
   // Block Module
-  getAllBlocks: async () => makeRequest(`/blocks`),
-  getBlockDetails: async (index) => makeRequest(`/blocks/${index}`),
+  getAllBlocks: async () => makeRequest(`/blockchain/blocks`, 'GET', null, baseURL),
+  getBlockDetails: async (index) => makeRequest(`/blockchain/blocks/${index}`, 'GET', null, baseURL),
+
   // Blockchain Module
-  getGeneralBlockchainInfo: async () => makeRequest('/blockchain'),
-  getDetailedBlockchainInfo: async () => makeRequest('/blockchain/info'),
-  getDebugInfo: async () => makeRequest(`/blockchain/debug`),
-  resetBlockchain: async () => makeRequest(`/blockchain/debug/reset-chain`, 'GET'),
-  mineNewBlock: async (minerAddress, difficulty) => makeRequest(`/blockchain/debug/mine/${minerAddress}/${difficulty}`, 'GET'),
-  gettransactions: async () => makeRequest(`/blockchain/transactions`, 'GET'),
-  getPendingTransactions: async () => makeRequest(`/blockchain/transactions/pending`),
-  getConfirmedTransactions: async () => makeRequest(`/blockchain/transactions/confirmed`),
-  getTransactionDetails: async (tranHash) => makeRequest(`/blockchain/transactions/${tranHash}`),
-  // Blockchain Module
-createNewBlock: async (minerAddress, difficulty) => {
-  try {
-    const data = {
-      minerAddress,
-      difficulty,
-    };
-    const response = await makeRequest(`/blocks`, 'POST', data);
-    return response;
-  } catch (error) {
-    throw error;
-  }
-},
-createTransactions: async (sender, recipient, amount) => {
-  try {
-    const data = {
-      sender,
-      recipient,
-      amount,
-      
-    };
-    const response = await makeRequest(`/blockchain/transactions`, 'POST', data);
-    return response;
-  } catch (error) {
-    throw error;
-  }
-},
- // Endpoint to initiate mining process
- mineBlock: async (minerAddress, difficulty) => {
-  try {
-    const requestData = { minerAddress, difficulty };
-    const response = await makeRequest('/mine', 'POST', requestData);
-    return response;
-  } catch (error) {
-    throw error.response ? error.response.data.error : error.message;
-  }
-},
-listAllProducts: async () => makeRequest(`/marketplace/listAllProducts`, 'GET'),
-addFunds: async (amount) => makeRequest(`/marketplace/addFunds`, 'POST', { amount }),
-withdrawFunds: async (amount) => makeRequest(`/marketplace/withdrawFunds`, 'POST', { amount }),
-addProduct: async (name, price) => {
+  getGeneralBlockchainInfo: async () => makeRequest(`/blockchain`, 'GET', null, baseURL),
+  getDetailedBlockchainInfo: async () => makeRequest(`/blockchain/info`, 'GET', null, baseURL),
+  getDebugInfo: async () => makeRequest(`/blockchain/debug`, 'GET', null, baseURL),
+  resetBlockchain: async () => makeRequest(`/blockchain/debug/reset-chain`, 'POST', null, baseURL),
+  mineNewBlock: async (minerAddress, difficulty) => makeRequest(`/blockchain/debug/mine/${minerAddress}/${difficulty}`, 'GET', null, baseURL),
+
+  addTransactions: async (sender, recipient, amount) => {
     try {
-      const data = { name, price };
-      const response = await makeRequest('/marketplace/addProduct', 'POST', data);
-      return response;
+      const requestData = { sender, recipient, amount };
+      console.log("Data being passed to transaction:", requestData);
+
+      const response = await makeRequest(`/blockchain/transactions/add`, 'POST', requestData, baseURL);
     } catch (error) {
-      throw error;
+      throw error.response ? error.response.data.error : error.message;
     }
   },
 
-  updateProduct: async (productId, name, price) => {
-    try {
-      const data = { productId, name, price };
-      const response = await makeRequest('/marketplace/updateProduct', 'PUT', data);
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  deleteProduct: async (productId) => {
-    try {
-      const response = await makeRequest(`/marketplace/deleteProduct/${productId}`, 'DELETE');
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
-  createShipment: async (buyer, seller, productId) => makeRequest(`/marketplace/createShipment`, 'POST', { buyer, seller, productId }),
-  updateShipmentStatus: async (buyer, seller, productId) => makeRequest(`/marketplace/updateShipmentStatus`, 'POST', { buyer, seller, productId }),
-  purchaseProduct: async (productId) => makeRequest(`/marketplace/purchaseProduct`, 'POST', { productId }),
-
-  
+  // Marketplace Module
+  listAllProducts: async () => makeRequest(`/marketplace/listAllProducts`, 'GET', null, baseURL),
+  addProduct: async (productData) => makeRequest(`/marketplace/addProduct`, 'POST', productData, baseURL),
+  purchaseProduct: async (productId) => makeRequest(`/marketplace/purchaseProduct`, 'POST', { productId }, baseURL),
 };
 
 // Functions for user authentication

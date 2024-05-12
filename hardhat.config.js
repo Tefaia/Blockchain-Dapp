@@ -1,6 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
-//require("hardhat-typechain");
 
 module.exports = {
   networks: {
@@ -16,6 +15,8 @@ module.exports = {
         runs: 200
       }
     }
-  }
+  },
+  paths: {
+    sources: "./contracts", // Adjust this to your actual directory structure
+  },
 };
-

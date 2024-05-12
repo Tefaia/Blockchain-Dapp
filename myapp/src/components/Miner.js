@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -8,30 +8,29 @@ function Miner() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleAddressChange = (event) => {
-    setMinerAddress(event.target.value);
-  };
+  useEffect(() => {
+    const getAccounts = async () => {
+      try {
+        if (window.ethereum) {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            setMinerAddress(accounts[0]); // Set miner address to the first account
+          }
+        }
+      } catch (error) {
+        console.error('Error retrieving accounts from MetaMask:', error);
+        setErrorMessage('Error retrieving accounts from MetaMask. Please try again later.');
+      }
+    };
+
+    getAccounts();
+  }, []);
 
   const handleDifficultyChange = (event) => {
     setDifficulty(event.target.value);
   };
 
-  const connectMetaMask = async () => {
-    try {
-      if (window.ethereum) {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        setMinerAddress(window.ethereum.selectedAddress); // Set miner address to connected account address
-        setSuccessMessage('Connected to MetaMask');
-      } else {
-        setErrorMessage('MetaMask is not installed. Please install MetaMask to use this feature.');
-      }
-    } catch (error) {
-      console.error('Error connecting to MetaMask:', error);
-      setErrorMessage('Error connecting to MetaMask. Please try again later.');
-    }
-  };
-
-  const mineBlock = async () => {
+  const mineBlockDebug = async () => {
     try {
       // Check if MetaMask is connected
       if (!window.ethereum || !window.ethereum.selectedAddress) {
@@ -39,8 +38,10 @@ function Miner() {
         return;
       }
 
-      const response = await api.mineBlock(window.ethereum.selectedAddress, difficulty);
-      console.log(response); // For debugging purposes
+      const requestData = { minerAddress, difficulty }; // Use minerAddress state directly
+      console.log('Data being passed to mineBlock:', requestData); // Log data being passed
+      const response = await api.mineNewBlock(requestData.minerAddress, requestData.difficulty);
+      console.log('Mine Block Response:', response); // For debugging purposes
       setSuccessMessage('Block mined successfully!');
       setErrorMessage('');
     } catch (error) {
@@ -50,54 +51,24 @@ function Miner() {
     }
   };
 
-  const getMiningJob = async () => {
-    try {
-      const response = await api.getMiningJob(minerAddress, difficulty);
-      console.log(response); // For debugging purposes
-      setSuccessMessage('Mining job retrieved successfully!');
-      setErrorMessage('');
-    } catch (error) {
-      console.error('Error getting mining job:', error);
-      setSuccessMessage('');
-      setErrorMessage('Error getting mining job. Please try again later.');
-    }
-  };
-
-  const submitMinedBlock = async () => {
-    try {
-      const response = await api.submitMinedBlock();
-      console.log(response); // For debugging purposes
-      setSuccessMessage('Mined block submitted successfully!');
-      setErrorMessage('');
-    } catch (error) {
-      console.error('Error submitting mined block:', error);
-      setSuccessMessage('');
-      setErrorMessage('Error submitting mined block. Please try again later.');
-    }
-  };
-
   return (
     <div className="container mt-4">
-      <h2 className="mb-4">Miner Component</h2>
-      <button className="btn btn-primary me-3" onClick={connectMetaMask}>
-        Connect to MetaMask
-      </button>
+      <h2 className="text-primary mb-4">Miner Component</h2>
       <div className="mb-3">
         <label className="form-label">Miner Address:</label>
-        <input type="text" className="form-control" value={minerAddress} onChange={handleAddressChange} readOnly />
+        <input type="text" className="form-control" value={minerAddress} readOnly />
       </div>
       <div className="mb-3">
         <label className="form-label">Difficulty:</label>
         <input type="text" className="form-control" value={difficulty} onChange={handleDifficultyChange} />
       </div>
-      <button className="btn btn-primary me-3" onClick={mineBlock}>
-        Mine Block
-      </button>
-      <button className="btn btn-primary me-3" onClick={getMiningJob}>
-        Get Mining Job
-      </button>
-      <button className="btn btn-success" onClick={submitMinedBlock}>
-        Submit Mined Block
+
+      <button
+        type="button"
+        className="btn btn-success"
+        onClick={mineBlockDebug}
+      >
+        Mine Block in Debug Mode
       </button>
       {successMessage && <div className="alert alert-success mt-3">{successMessage}</div>}
       {errorMessage && <div className="alert alert-danger mt-3">{errorMessage}</div>}

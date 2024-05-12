@@ -1,19 +1,20 @@
 const SHA256 = require('crypto-js/sha256');
 
 class CreateBlock {
-    constructor(index, timestamp, transactions, previousHash = '', minerAddress = '', difficulty = 0) {
+    constructor(index, timestamp, transactions, previousHash = '', minerAddress = '', difficulty = 0, reward = 10) {
         this.index = index;
         this.timestamp = timestamp;
         this.transactions = transactions;
         this.previousHash = previousHash;
         this.minerAddress = minerAddress;
         this.difficulty = difficulty;
+        this.reward = reward; // Add reward property
         this.hash = this.calculateHash();
         this.nonce = 0;
     }
 
     calculateHash() {
-        return SHA256(this.index + this.previousHash + this.timestamp + JSON.stringify(this.transactions) + this.nonce + this.minerAddress).toString();
+        return SHA256(this.index + this.previousHash + this.timestamp + JSON.stringify(this.transactions) + this.nonce + this.minerAddress + this.reward).toString();
     }
 
     mineBlock() {
@@ -30,14 +31,13 @@ class CreateBlock {
         console.log("Block mined: " + this.hash);
     }
 
-    static createBlock(transactions, previousBlock, minerAddress, difficulty) {
+    static createBlock(transactions, previousBlock, minerAddress, difficulty, reward) {
         const newIndex = previousBlock.index + 1;
         const newTimestamp = Date.now();
         const newPreviousHash = previousBlock.hash;
 
-        return new CreateBlock(newIndex, newTimestamp, transactions, newPreviousHash, minerAddress, difficulty);
+        return new CreateBlock(newIndex, newTimestamp, transactions, newPreviousHash, minerAddress, difficulty, reward);
     }
 }
 
 module.exports = CreateBlock;
-

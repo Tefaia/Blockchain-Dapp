@@ -7,20 +7,13 @@ const pool = require('./db'); // Import the MySQL connection pool
 //const axios = require('axios');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
-const walletRoutes = require('./wallet');
-const faucetRoutes = require('./faucet');
-const { generateNewAddress } = require('./generateaddress');
-const peerRoutes = require('./peer');
-const minerRoutes = require('./miner');
-const blockRoutes = require('./block');
-const blockchainRoutes = require('./blockchain');
-const CreateBlock = require('./createblock');
+const walletRoutes = require('./Wallet');
+const faucetRoutes = require('./Faucet');
+const blockchainRoutes = require('./Blockchain');
 const helmet = require('helmet');
 const uuid = require('uuid');
-const CreateBlockchain = require('./createblockchain');  // Import the CreateBlockchain class
-const marketplaceRoutes=require('./marketplace');
-// Initialize an array to store connected peers
-let connectedPeers = [];
+const marketplaceRoutes=require('./Marketplace');
+
 // Define the generateSessionId function
 function generateSessionId() {
   let sessionId = uuid.v4();
@@ -39,12 +32,14 @@ app.use(bodyParser.json());
 app.use(helmet());
 
 // Set up CORS middleware
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://dapp-qeavc4m6n-tefaias-projects.vercel.app'],
+  origin: 'http://localhost:3000',
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
   optionsSuccessStatus: 204,
 }));
+
 
 // Express session and cookie parser setup
 app.use(cookieParser());
@@ -153,37 +148,35 @@ app.post('/login', async (req, res) => {
 app.post('/logout', (req, res) => {
   console.log('Received logout request');
 
-  const username = req.session.username;
-
-  // Delete the session data from the sessions table
-  pool.query('DELETE FROM logged_in_users WHERE username = ?', [username], (err) => {
+  // Destroy the session
+  req.session.destroy((err) => {
     if (err) {
-      console.error('Error deleting session data:', err);
+      console.error('Error destroying session:', err);
       res.status(500).json({ error: 'Internal Server Error' });
     } else {
       console.log('Logout successful');
-      req.session.destroy(); // Destroy the session
       res.clearCookie('session_id'); // Clear the session cookie
-
-      
-
       res.status(200).json({ message: 'Logout successful' });
     }
   });
 });
 
+
 // Dashboard route
 app.get('/dashboard', authenticateSession, (req, res) => {
   const { username } = req.session;
 
-  pool.query('SELECT * FROM logged_in_users WHERE username = ?', [username], (err, results) => {
+  // Fetch user data from the users table
+  pool.query('SELECT * FROM users WHERE username = ?', [username], (err, results) => {
     if (err) {
       console.error('Error fetching user data:', err);
       res.status(500).json({ error: 'Internal Server Error' });
     } else {
       if (results.length > 0) {
-        const userDashboardData = results[0];
-        res.status(200).json(userDashboardData);
+        const userData = results[0];
+        // Remove sensitive data if needed
+        delete userData.password;
+        res.status(200).json(userData);
       } else {
         res.status(404).json({ error: 'User data not found' });
       }
@@ -191,14 +184,10 @@ app.get('/dashboard', authenticateSession, (req, res) => {
   });
 });
 
-let blockchain = [new CreateBlock(0, new Date().toISOString(), [], '0')];
-app.use('/wallet', walletRoutes);
-app.use('/faucet', faucetRoutes);
-app.use('/peers', peerRoutes);
-app.use('/mining', minerRoutes);
-app.use('/blocks', blockRoutes);
-app.use('/blockchain', blockchainRoutes);
-app.use('/marketplace', marketplaceRoutes);
+app.use('/Wallet', walletRoutes);
+app.use('/Faucet', faucetRoutes);
+app.use('/Blockchain', blockchainRoutes);
+app.use('/Marketplace', marketplaceRoutes);
 
 app.listen(port, () => {
   console.log(`Backend Server running on http://localhost:${port}`);

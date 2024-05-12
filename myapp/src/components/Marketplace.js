@@ -1,253 +1,301 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/api'; // Import the API module
 import 'bootstrap/dist/css/bootstrap.min.css';
+import api from '../api/api';
+import axios from 'axios';
 
-const Marketplace = () => {
-    const [products, setProducts] = useState([]);
-    const [name, setName] = useState('');
-    const [price, setPrice] = useState('');
-    const [addFundsAmount, setAddFundsAmount] = useState('');
-    const [withdrawFundsAmount, setWithdrawFundsAmount] = useState('');
-    const [buyer, setBuyer] = useState('');
-    const [seller, setSeller] = useState('');
-    const [productId, setProductId] = useState('');
-    const [updateBuyer, setUpdateBuyer] = useState('');
-    const [updateSeller, setUpdateSeller] = useState('');
-    const [updateProductId, setUpdateProductId] = useState('');
-    const [purchaseProductId, setPurchaseProductId] = useState('');
-  
+function Marketplace() {
+  const [products, setProducts] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [description, setDescription] = useState('');
+  const [condition, setCondition] = useState('new');
+  const [purchased, setPurchased] = useState('false');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [searchCondition, setSearchCondition] = useState('new');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [address, setAddress] = useState(null);
+  const [balance, setBalance] = useState('');
+  const [mybalance, setMyBal] = useState('');
+
+  const [error, setError] = useState('');
+  useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const productsData = await api.listAllProducts();
-        setProducts(productsData.products);
+        const response = await api.listAllProducts({ purchased: 'false' });
+        setProducts(response);
       } catch (error) {
-        console.error(error);
-        // Handle errors as needed
+        console.error('Error fetching products:', error);
+        setErrorMessage('Error fetching products.');
       }
     };
+    const fetchBalance = async () => {
+      if (address) {
+        try {
+          const url = `http://localhost:3002/faucet/balance/${address}`;
+          const response = await axios.get(url);
+          setBalance(response.data.balance);
+          setError('');
+        } catch (error) {
+          setBalance('');
+          setError(`Error: ${error.response.data.error}`);
+        }
+      }
+    };
+    fetchProducts();
+
+    fetchBalance();
+  }, [address]);
   
-    const handleAddFunds = async () => {
+
+  useEffect(() => {
+    // Fetch connected account when the component mounts
+    const fetchConnectedAccount = async () => {
       try {
-        if (window.ethereum) {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          await api.addFunds(addFundsAmount);
-          console.log('Funds added successfully');
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          setAddress(accounts[0]);
         } else {
-          console.error('MetaMask is not installed. Please install MetaMask to use this feature.');
+          setAddress(null);
         }
       } catch (error) {
-        console.error('Error adding funds:', error);
+        console.error('Error fetching connected account:', error);
+        setAddress(null);
       }
     };
+
+    fetchConnectedAccount();
+  }, []);
+  const handlePurchase = async (productId, price, seller) => {
+    const mybalance = balance - price; // Calculate mybalance
+    try {
+      if (price > balance) {
+        throw new Error('You do not have enough tokens to purchase this product.');
+      }
+      
+      if (seller === address) {
+        throw new Error("You can't purchase your own product.");
+      }
   
-    const handleWithdrawFunds = async () => {
-      try {
-        if (window.ethereum) {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          await api.withdrawFunds(withdrawFundsAmount);
-          console.log('Funds withdrawn successfully');
-        } else {
-          console.error('MetaMask is not installed. Please install MetaMask to use this feature.');
-        }
-      } catch (error) {
-        console.error('Error withdrawing funds:', error);
-      }
-    };
+      // Make a POST request to add the transaction
+      await axios.post('http://localhost:3002/blockchain/transactions/add', { productId, price, seller, address, mybalance });
   
-    const handleShipmentSubmit = async () => {
-      try {
-        const shipmentData = { buyer, seller, productId };
-        await api.createShipment(shipmentData);
-        console.log('Shipment created successfully');
-        setBuyer('');
-        setSeller('');
-        setProductId('');
-      } catch (error) {
-        console.error('Error creating shipment:', error);
-      }
-    };
+      // Refresh the product list after purchasing the product
+      const updatedProducts = await api.listAllProducts({ purchased: 'false' });
+      setProducts(updatedProducts);
   
-    const handleUpdateShipmentStatus = async () => {
-      try {
-        const shipmentStatusData = { buyer: updateBuyer, seller: updateSeller, productId: updateProductId };
-        await api.updateShipmentStatus(shipmentStatusData);
-        console.log('Shipment status updated successfully');
-        setUpdateBuyer('');
-        setUpdateSeller('');
-        setUpdateProductId('');
-      } catch (error) {
-        console.error('Error updating shipment status:', error);
-      }
-    };
+      setSuccessMessage('Product purchased successfully');
+    } catch (error) {
+      console.error('Error purchasing product:', error);
+      setErrorMessage(error.message);
+    }
+  };
   
-    const handlePurchaseProduct = async () => {
-      try {
-        if (window.ethereum) {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const response = await api.purchaseProduct(purchaseProductId);
-          console.log('Product purchased successfully:', response);
-          setPurchaseProductId('');
-        } else {
-          console.error('MetaMask is not installed. Please install MetaMask to use this feature.');
-        }
-      } catch (error) {
-        console.error('Error purchasing product:', error);
-      }
-    };
-    const handleUpdateProduct = async () => {
-      try {
-        await api.updateProduct(updateProductId, name, price);
-        console.log('Product updated successfully');
-        // You might want to fetch products again to update the list
-        fetchProducts();
-        setUpdateProductId('');
-        setName('');
-        setPrice('');
-      } catch (error) {
-        console.error('Error updating product:', error);
-      }
-    };
   
-    const handleDeleteProduct = async () => {
-      try {
-        await api.deleteProduct(productId);
-        console.log('Product deleted successfully');
-        // You might want to fetch products again to update the list
-        fetchProducts();
-        setProductId('');
-      } catch (error) {
-        console.error('Error deleting product:', error);
+  const totalPages = Math.ceil(products.length / itemsPerPage);
+  const lastIndex = currentPage * itemsPerPage;
+  const firstIndex = lastIndex - itemsPerPage;
+  const currentProducts = products.slice(firstIndex, lastIndex);
+
+  const paginate = pageNumber => setCurrentPage(pageNumber);
+
+  const handleSearchByCondition = async () => {
+    try {
+      const response = await api.listAllProducts({ purchased: 'false' });
+      const filteredProducts = response.filter(product => product.condition === searchCondition);
+      setProducts(filteredProducts);
+    } catch (error) {
+      console.error('Error searching for products by condition:', error);
+    }
+  };
+
+  const handleAddProduct = async () => {
+    try {
+      if (!address) {
+        throw new Error('No connected account found.');
       }
-    };
-    useEffect(() => {
-      fetchProducts();
-    }, []); // Fetch products on component mount
-  
-    return (
-        <div className="container">
-            <h1 className="mt-4">Marketplace</h1>
-            <div className="mt-4">
-            <h2>Add Funds</h2>
+
+      const productData = {
+        name,
+        price,
+        description,
+        condition,
+        purchased,
+        seller: address
+      };
+
+      // Make a request to add the product
+      await api.addProduct(productData);
+
+      // Refresh the product list after adding the product
+      const updatedProducts = await api.listAllProducts({ purchased: 'false' });
+      setProducts(updatedProducts);
+
+      // Clear the form fields after adding the product
+      setName('');
+      setPrice('');
+      setDescription('');
+      setCondition('new');
+      setPurchased('false');
+
+      // Set the success message
+      setSuccessMessage('Product added successfully');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      setErrorMessage(error.message);
+    }
+  };
+
+  return (
+    <div className="container">
+      
+            <div className="card-body">
+              <p className="text-center">My Address: {address}</p>
+              {balance && <p className="text-center">My Balance: {balance}</p>}
+              {error && <p className="mt-3 text-danger">{error}</p>}
+            </div>
+         
+      
+      {/* Search Form */}
+      <div className="mt-4">
+        <h2 className="text-primary mb-4">Search Products by Condition</h2>
+        <div className="mb-3">
+          <label htmlFor="searchCondition" className="form-label text-primary">Condition:</label>
+          <select
+            id="searchCondition"
+            className="form-select"
+            value={searchCondition}
+            onChange={(e) => {
+              setSearchCondition(e.target.value);
+              handleSearchByCondition();
+            }}
+          >
+            <option value="new">New</option>
+            <option value="refurbished">Refurbished</option>
+          </select>
+        </div>
+      </div>
+
+      <h2 className="text-primary mb-4">Product List</h2>
+      {errorMessage && (
+        <div className="alert alert-danger" role="alert">
+          {errorMessage}
+        </div>
+      )}
+      <div className="row">
+        <div className="col">
+          <table className="table table-striped">
+            <thead>
+              <tr>
+                <th className="bg-primary text-white border">Name</th>
+                <th className="bg-primary text-white border">Price</th>
+                <th className="bg-primary text-white border">Description</th>
+                <th className="bg-primary text-white border">Condition</th>
+                <th className="bg-primary text-white border">Seller</th>
+                <th className="bg-primary text-white border">Purchased</th>
+                <th className="bg-primary text-white border">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+            {currentProducts.map(product => (
+  <tr key={product.id}>
+    <td>{product.name}</td>
+    <td>${product.price}</td>
+    <td>{product.description}</td>
+    <td>{product.condition}</td>
+    <td>{product.seller}</td>
+    <td>{product.purchased}</td>
+    <td>
+      <button
+        className="btn btn-primary"
+        onClick={() => handlePurchase(product.id, product.price, product.seller)}
+        disabled={product.purchased === 'true'} // Disable button if product is purchased
+      >
+        Purchase
+      </button>
+    </td>
+  </tr>
+))}
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <nav>
+        <ul className="pagination">
+          {Array.from({ length: totalPages }, (_, index) => (
+            <li key={index} className={`page-item ${currentPage === index + 1 ? 'active' : ''}`}>
+              <button onClick={() => paginate(index + 1)} className="page-link">{index + 1}</button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* Add Product Form */}
+      <div className="mt-4">
+        <h2 className="text-primary mb-4">Add Product</h2>
+        <form>
+          <div className="mb-3">
+            <label htmlFor="name" className="form-label text-primary">Name:</label>
             <input
-                type="number"
-                className="form-control"
-                placeholder="Enter amount to add"
-                value={addFundsAmount}
-                onChange={(e) => setAddFundsAmount(e.target.value)}
+              type="text"
+              id="name"
+              className="form-control"
+              placeholder="Enter product name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
-            <button className="btn btn-primary mt-2" onClick={handleAddFunds}>
-                Add Funds
-            </button>
-        </div>
-
-        {/* Withdraw Funds */}
-        <div className="mt-4">
-            <h2>Withdraw Funds</h2>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="price" className="form-label text-primary">Price:</label>
             <input
-                type="number"
-                className="form-control"
-                placeholder="Enter amount to withdraw"
-                value={withdrawFundsAmount}
-                onChange={(e) => setWithdrawFundsAmount(e.target.value)}
+              type="number"
+              id="price"
+              className="form-control"
+              placeholder="Enter product price"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
             />
-            <button className="btn btn-primary mt-2" onClick={handleWithdrawFunds}>
-                Withdraw Funds
-            </button>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="description" className="form-label text-primary">Description:</label>
+            <textarea
+              id="description"
+              className="form-control"
+              placeholder="Enter product description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="condition" className="form-label text-primary">Condition:</label>
+            <select
+              id="condition"
+              className="form-select"
+              value={condition}
+              onChange={(e) => setCondition(e.target.value)}
+            >
+              <option value="new">New</option>
+              <option value="refurbished">Refurbished</option>
+            </select>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={handleAddProduct}>
+            Add Product
+          </button>
+        </form>
+      </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="alert alert-success mt-4" role="alert">
+          {successMessage}
         </div>
-            <div className="mt-4">
-                <h2>Product List</h2>
-                {products.length === 0 ? (
-                    <p>No products available.</p>
-                ) : (
-                    <ul className="list-group">
-                        {products.map((product) => (
-                            <li key={product.id} className="list-group-item">
-                                {product.name} - ${product.price}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
-            <div className="mt-4">
-                <h2>Add / Update / Delete Product</h2>
-                <label htmlFor="name">Name:</label>
-                <input
-                    type="text"
-                    id="name"
-                    className="form-control"
-                    placeholder="Enter product name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                />
-                <label htmlFor="price">Price:</label>
-                <input
-                    type="number"
-                    id="price"
-                    className="form-control"
-                    placeholder="Enter product price"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                />
-               <button className="btn btn-primary mt-2 me-2" onClick={handleAddFunds}>
-  Add Product
-</button>
-<button className="btn btn-primary mt-2 me-2" onClick={handleUpdateProduct}>
-  Update Product
-</button>
-<button className="btn btn-primary mt-2" onClick={handleDeleteProduct}>
-  Delete Product
-</button>
-
-            </div>
-            <div className="mt-4">
-                <h2>Create Shipment</h2>
-                <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter buyer"
-                    value={buyer}
-                    onChange={(e) => setBuyer(e.target.value)}
-                />
-                <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter seller"
-                    value={seller}
-                    onChange={(e) => setSeller(e.target.value)}
-                />
-                <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter product ID"
-                    value={productId}
-                    onChange={(e) => setProductId(e.target.value)}
-                />
-                <button className="btn btn-primary mt-2" onClick={handleShipmentSubmit}>
-                    Create Shipment
-                </button>
-                <button className="btn btn-primary mt-2" onClick={handleUpdateShipmentStatus}>
-                    Update Shipment Status
-                </button>
-            </div>
-            <div className="mt-4">
-  <h2>Purchase Product</h2>
-  <div className="input-group mb-3">
-    <input
-      type="text"
-      className="form-control"
-      placeholder="Enter product ID to purchase"
-      value={purchaseProductId}
-      onChange={(e) => setPurchaseProductId(e.target.value)}
-    />
-    <button className="btn btn-primary" onClick={handlePurchaseProduct}>
-      Purchase Product
-    </button>
-  </div>
-</div>
-
-        </div>
-    );
-};
+      )}
+    </div>
+  );
+}
 
 export default Marketplace;
